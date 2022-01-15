@@ -3,4 +3,7 @@ pandas
 jupyter
 matplotlib
 sklearn
-ray
+ray[tune]
+tune-sklearn
+scikit-optimize
+pycaret-ts-alpha
