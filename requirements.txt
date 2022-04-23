@@ -1,9 +1,7 @@
-numpy
-pandas
 jupyter
-matplotlib
-sklearn
 ray[tune]
 tune-sklearn
 scikit-optimize
 pycaret-ts-alpha
+black
+flake8
