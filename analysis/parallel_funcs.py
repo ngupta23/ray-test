@@ -1,6 +1,59 @@
 import pandas as pd
 from pycaret.time_series import TSForecastingExperiment
 
+from pmdarima.arima import ARIMA
+
+
+def forecast_single_pmd(data: pd.DataFrame) -> pd.DataFrame:
+    """Forecasts a single item and returns the predictions
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Dataframe containing a single item and its historical values
+
+    Returns
+    -------
+    pd.DataFrame
+        Predictions for the item
+    """
+    item = None
+    if "Item" in data.columns:
+        item = data["Item"].unique()
+        assert len(item) == 1
+        item = item[0]
+        print(f"Item: {item} | History Available: {len(data)} months")
+    else:
+        print("Item column not found in dataframe")
+
+    data["YYYYMM"] = pd.PeriodIndex(data["YYYYMM"], freq="M")
+    data = data.sort_values("YYYYMM")
+    data.set_index("YYYYMM", inplace=True)
+
+    FH = 12
+
+    # Fit
+    model = ARIMA(
+        order=(1, 0, 0),
+        seasonal_order=(0, 0, 0, 0),
+        with_intercept=True,
+        # method="nm",
+    )
+    model.fit(data["Sales"])
+
+    # Predict
+    dates = data.index.sort_values()
+    future_index = [dates[-1] + i for i in range(1, FH + 1)]
+    preds = pd.DataFrame(index=future_index)
+    preds["y_pred"] = model.predict(FH)
+    preds["y_pred"] = preds["y_pred"].clip(lower=0).round()
+
+    # When using with ray, item will not be in index since we are not using
+    # pandas groupby. Hence, adding explicitly here.
+    preds["Item"] = item
+
+    return preds
+
 
 def forecast_single(data: pd.DataFrame) -> pd.DataFrame:
     """Forecasts a single item and returns the predictions
@@ -58,6 +111,7 @@ def forecast_single(data: pd.DataFrame) -> pd.DataFrame:
         preds = exp.predict_model(final)
 
     preds["y_pred"] = preds["y_pred"].clip(lower=0).round().astype(int)
+    print(preds)
 
     # When using with ray, item will not be in index since we are not using
     # pandas groupby. Hence, adding explicitly here.

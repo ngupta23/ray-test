@@ -1,7 +1,7 @@
 import time
 import pandas as pd
 import ray
-from parallel_funcs import forecast_single
+from parallel_funcs import forecast_single, forecast_single_pmd
 
 
 # %%
@@ -13,7 +13,8 @@ grouped_data = data_subset.groupby("Item")
 
 # %% PYTHON SERIAL RUN
 start = time.time()
-results = grouped_data.apply(forecast_single)
+# results = grouped_data.apply(forecast_single)
+results = grouped_data.apply(forecast_single_pmd)
 # Item is already in dataframe, hence dropping before resetting index
 results = results.droplevel(level=0)
 results.reset_index(inplace=True)
@@ -27,7 +28,10 @@ start = time.time()
 ray.init()
 results_ray = []
 for group in grouped_data.groups.keys():
-    result_ray = ray.remote(forecast_single).remote(data=grouped_data.get_group(group))
+    # result_ray = ray.remote(forecast_single).remote(data=grouped_data.get_group(group))
+    result_ray = ray.remote(forecast_single_pmd).remote(
+        data=grouped_data.get_group(group)
+    )
     results_ray.append(result_ray)
 results_ray = ray.get(results_ray)
 
